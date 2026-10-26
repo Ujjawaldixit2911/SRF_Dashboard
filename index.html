@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Head Dashboard</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#111827',
+                        secondary: '#6B7280',
+                        muted: '#9CA3AF',
+                        accent: '#2563EB',
+                        gradeA: '#2563EB',
+                        gradeB: '#93C5FD',
+                        catHT: '#2563EB',
+                        catNT: '#60A5FA',
+                        catHazy: '#CBD5E1',
+                        posVariance: '#16A34A',
+                        negVariance: '#DC2626',
+                        bgMain: '#F7F8FA',
+                        cardBorder: '#E7E9EE'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Roboto Mono', 'monospace'],
+                    },
+                    boxShadow: {
+                        card: '0 1px 2px rgba(16, 24, 40, 0.04)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { 
+            background-color: #F7F8FA; 
+            color: #111827; 
+            -webkit-font-smoothing: antialiased;
+        }
+        .card { 
+            background-color: white; 
+            border: 1px solid #E7E9EE; 
+            border-radius: 10px; 
+            box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04); 
+        }
+        .tabular-nums { font-variant-numeric: tabular-nums; }
+        
+        /* Custom scrollbar for table */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F7F8FA;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D1D5DB;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9CA3AF;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- Data ---
+        const kpiData = [
+            { id: 'salesMt', title: 'Sales MT', act: 35400, bud: 34800, var: 1.7, unit: 'MT' },
+            { id: 'salesVal', title: 'Sales Value', act: 556, bud: 540, var: 3.0, unit: '₹Cr' },
+            { id: 'npr', title: 'NPR', act: 157.1, bud: 155.0, var: 1.4, unit: '₹/kg' },
+            { id: 'rmCost', title: 'RM Cost', act: 97.1, bud: 98.5, var: -1.4, unit: '₹/kg', rev: true },
+            { id: 'coc', title: 'CoC', act: 38.6, bud: 40.0, var: -3.5, unit: '₹/kg', rev: true },
+            { id: 'lineUptime', title: 'Line Uptime', act: 93.4, bud: 94.2, var: -0.8, unit: '%' },
+            { id: 'slittingEff', title: 'Slitting Eff.', act: 90.6, bud: 91.2, var: -0.6, unit: '%' }
+        ];
+
+        const p1Data = [
+            { month: 'Apr-26', budMt: 33500, actMt: 32800, varMt: -2.1, budCr: 519, actCr: 498, npr: 151.8 },
+            { month: 'May-26', budMt: 34000, actMt: 34600, varMt: 1.8, budCr: 527, actCr: 536, npr: 154.9 },
+            { month: 'Jun-26', budMt: 33800, actMt: 33100, varMt: -2.1, budCr: 524, actCr: 513, npr: 155.0 },
+            { month: 'Jul-26', budMt: 34200, actMt: 35000, varMt: 2.3, budCr: 530, actCr: 546, npr: 156.0 },
+            { month: 'Aug-26', budMt: 34500, actMt: 33900, varMt: -1.7, budCr: 535, actCr: 525, npr: 154.9 },
+            { month: 'Sep-26', budMt: 34800, actMt: 35400, varMt: 1.7, budCr: 540, actCr: 556, npr: 157.1 }
+        ];
+
+        const p2aData = [
+            { month: 'Apr-26', aMt: 28700, bMt: 4100 },
+            { month: 'May-26', aMt: 30500, bMt: 4100 },
+            { month: 'Jun-26', aMt: 29100, bMt: 4000 },
+            { month: 'Jul-26', aMt: 31150, bMt: 3850 },
+            { month: 'Aug-26', aMt: 29700, bMt: 4200 },
+            { month: 'Sep-26', aMt: 31400, bMt: 4000 }
+        ];
+
+        const p2bData = [
+            { micron: '8 mic', aMt: 1850, bMt: 260 },
+            { micron: '10 mic', aMt: 3400, bMt: 480 },
+            { micron: '12 mic', aMt: 9600, bMt: 1150 },
+            { micron: '15 mic', aMt: 5200, bMt: 700 },
+            { micron: '18 mic', aMt: 4100, bMt: 560 },
+            { micron: '23 mic', aMt: 4300, bMt: 520 },
+            { micron: '36 mic', aMt: 2950, bMt: 330 }
+        ];
+
+        const p2cData = [
+            { month: 'Apr-26', ht: 14100, nt: 15300, hazy: 3400 },
+            { month: 'May-26', ht: 15000, nt: 16100, hazy: 3500 },
+            { month: 'Jun-26', ht: 14200, nt: 15500, hazy: 3400 },
+            { month: 'Jul-26', ht: 15300, nt: 16200, hazy: 3500 },
+            { month: 'Aug-26', ht: 14600, nt: 15700, hazy: 3600 },
+            { month: 'Sep-26', ht: 15400, nt: 16400, hazy: 3600 }
+        ];
+
+        const p3Data = [
+            { name: 'Nova Flexipack', qty: 6200, npr: 158.5, aMt: 5600, bMt: 600 },
+            { name: 'Zenith Films', qty: 5400, npr: 156.0, aMt: 4850, bMt: 550 },
+            { name: 'Aureus Packaging', qty: 4800, npr: 159.2, aMt: 4400, bMt: 400 },
+            { name: 'Crest Laminates', qty: 4100, npr: 152.4, aMt: 3600, bMt: 500 },
+            { name: 'Orbit Converters', qty: 3600, npr: 155.8, aMt: 3250, bMt: 350 },
+            { name: 'Meridian Poly', qty: 3200, npr: 150.9, aMt: 2800, bMt: 400 },
+            { name: 'Others (export)', qty: 8100, npr: 160.3, aMt: 6900, bMt: 1200 }
+        ];
+
+        const p4Data = [
+            { month: 'Apr-26', bud: 96.0, act: 97.8 },
+            { month: 'May-26', bud: 96.5, act: 95.9 },
+            { month: 'Jun-26', bud: 97.0, act: 98.6 },
+            { month: 'Jul-26', bud: 97.5, act: 96.4 },
+            { month: 'Aug-26', bud: 98.0, act: 99.2 },
+            { month: 'Sep-26', bud: 98.5, act: 97.1 }
+        ];
+
+        const p5Data = [
+            { month: 'Apr-26', vc: 17.8, fc: 22.4, act: 40.2, bud: 39.0 },
+            { month: 'May-26', vc: 17.2, fc: 21.9, act: 39.1, bud: 39.0 },
+            { month: 'Jun-26', vc: 18.1, fc: 22.7, act: 40.8, bud: 39.5 },
+            { month: 'Jul-26', vc: 16.9, fc: 21.5, act: 38.4, bud: 39.5 },
+            { month: 'Aug-26', vc: 17.6, fc: 22.8, act: 40.4, bud: 40.0 },
+            { month: 'Sep-26', vc: 17.0, fc: 21.6, act: 38.6, bud: 40.0 }
+        ];
+
+        const p6Data = [
+            { prod: 'BOPET', bud: 19150, act: 18970, aMt: 16800, bMt: 2170 },
+            { prod: 'BOPP', bud: 13580, act: 14660, aMt: 13200, bMt: 1460 },
+            { prod: 'FOIL', bud: 1454, act: 1300, aMt: 1180, bMt: 120 },
+            { prod: 'CPP', bud: 0, act: 470, aMt: 420, bMt: 50 }
+        ];
+
+        const p7Data = [
+            { line: 'PET Line-112 (SEZ)', act: 94.2, tar: 95.0 },
+            { line: 'PET Line-1036', act: 92.8, tar: 94.0 },
+            { line: 'PET Line-240', act: 95.6, tar: 95.0 },
+            { line: 'BOPP Line-1941', act: 93.1, tar: 94.0 },
+            { line: 'BOPP Line-280', act: 91.7, tar: 93.0 }
+        ];
+
+        const p8Data = [
+            { line: 'PET Line-112', act: 91.5, tar: 92.0 },
+            { line: 'PET Line-1036', act: 89.8, tar: 91.0 },
+            { line: 'PET Line-240', act: 92.7, tar: 92.0 },
+            { line: 'BOPP Line-1941', act: 90.4, tar: 91.0 },
+            { line: 'BOPP Line-280', act: 88.9, tar: 90.0 }
+        ];
+
+        // --- Chart Defaults ---
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#6B7280';
+        Chart.defaults.scale.grid.color = '#EEF1F5';
+        
+        // --- Components ---
+        const SparklineSVG = ({ color }) => (
+            <svg width="36" height="12" viewBox="0 0 36 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 10C3.5 10 5.5 8 7 6C8.5 4 11 9 13 7C15 5 18 3 20 5C22 7 24 2 27 4C30 6 32.5 1 35 1" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+        );
+
+        const KPI = ({ title, act, bud, var: variance, unit, rev, mode }) => {
+            const isPos = variance >= 0;
+            const isGood = rev ? !isPos : isPos;
+            const colorClass = isGood ? 'text-posVariance' : 'text-negVariance';
+            const arrow = isPos ? '▲' : '▼';
+            const displayVal = mode === 'Budget' ? bud : act;
+            
+            return (
+                <div className="card p-4 flex flex-col justify-between w-full h-full min-w-[150px]">
+                    <div className="text-xs text-muted font-medium mb-3 tracking-wide">{title}</div>
+                    <div className="flex items-end gap-1">
+                        <span className="text-2xl font-mono font-semibold text-primary">{displayVal.toLocaleString()}</span>
+                        <span className="text-xs text-secondary mb-1 font-mono">{unit}</span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-xs font-mono">
+                        <div className="flex items-center gap-1">
+                            <span className={`font-semibold ${colorClass}`}>{arrow} {Math.abs(variance)}%</span>
+                        </div>
+                        <div><SparklineSVG color={isGood ? '#16A34A' : '#DC2626'} /></div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ChartBox = ({ id, title, subtitle, children, rightAction }) => (
+            <div className="card p-5 flex flex-col h-full">
+                <div className="flex justify-between items-start mb-4">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold">{id}</span>
+                            <h3 className="text-sm font-semibold text-primary">{title}</h3>
+                        </div>
+                        {subtitle && <p className="text-xs text-secondary mt-1">{subtitle}</p>}
+                    </div>
+                    {rightAction && <div>{rightAction}</div>}
+                </div>
+                <div className="flex-1 w-full relative min-h-[250px]">
+                    {children}
+                </div>
+            </div>
+        );
+
+        const ChartComponent = ({ type, data, options, plugins, className }) => {
+            const canvasRef = useRef(null);
+            const chartRef = useRef(null);
+
+            useEffect(() => {
+                if (canvasRef.current) {
+                    chartRef.current = new Chart(canvasRef.current, {
+                        type,
+                        data,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: { 
+                                    position: 'top',
+                                    align: 'end',
+                                    labels: { usePointStyle: true, boxWidth: 6, font: { family: 'Inter', size: 11 } }
+                                },
+                                tooltip: {
+                                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                                    titleFont: { family: 'Inter', size: 12 },
+                                    bodyFont: { family: 'Roboto Mono', size: 11 },
+                                    padding: 10,
+                                    cornerRadius: 6,
+                                    displayColors: true
+                                }
+                            },
+                            scales: type === 'doughnut' ? {} : {
+                                x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } },
+                                y: { grid: { color: '#EEF1F5', drawBorder: false }, ticks: { font: { family: 'Roboto Mono', size: 11 } }, border: { display: false } }
+                            },
+                            ...options
+                        },
+                        plugins
+                    });
+                }
+                return () => {
+                    if (chartRef.current) chartRef.current.destroy();
+                };
+            }, [type, data, options, plugins]);
+
+            return <div className={`w-full h-full absolute inset-0 ${className || ''}`}><canvas ref={canvasRef}></canvas></div>;
+        };
+
+        // --- Main Dashboard ---
+        const Dashboard = () => {
+            const [actVsBud, setActVsBud] = useState('Actual');
+            const [activeP2Tab, setActiveP2Tab] = useState('Grade');
+            const [p6Drill, setP6Drill] = useState(false);
+            
+            const [filterMonth, setFilterMonth] = useState('Month (All)');
+            const [filterPlant, setFilterPlant] = useState('Plant (All)');
+            const [filterProduct, setFilterProduct] = useState('Product (All)');
+            const [filterGrade, setFilterGrade] = useState('Grade (All)');
+            const [filterCategory, setFilterCategory] = useState('Category (All)');
+
+            const filterState = useMemo(() => {
+                let vol = 1;
+                let rate = 1;
+                if (filterMonth !== 'Month (All)') {
+                    const monthMap = {'Apr-26':0.85, 'May-26':0.88, 'Jun-26':0.92, 'Jul-26':0.95, 'Aug-26':0.98, 'Sep-26':1};
+                    const m = monthMap[filterMonth] || 1;
+                    vol *= m;
+                    rate *= (0.95 + m * 0.05);
+                }
+                if (filterPlant !== 'Plant (All)') {
+                    const pMap = { 'SEZ':{v:1.2, r:0.95}, 'DTA-PET':{v:0.85, r:1.02}, 'DTA-BOPP':{v:0.4, r:1.08}, 'KPR':{v:0.6, r:1.05}, 'Thailand':{v:0.55, r:1.12}, 'Hungary':{v:0.5, r:1.18}, 'S.Africa':{v:0.45, r:1.25} };
+                    const m = pMap[filterPlant] || {v:0.8, r:1.02};
+                    vol *= m.v; rate *= m.r;
+                }
+                if (filterProduct !== 'Product (All)') {
+                    const prMap = {'PET':{v:1.3, r:0.98}, 'BOPP':{v:0.7, r:1.1}, 'CPP':{v:0.2, r:1.2}, 'FOIL':{v:0.1, r:1.5}};
+                    const m = prMap[filterProduct] || {v:0.7, r:1};
+                    vol *= m.v; rate *= m.r;
+                }
+                if (filterGrade !== 'Grade (All)') { vol *= (filterGrade === 'A' ? 1.1 : 0.6); rate *= (filterGrade === 'A' ? 0.99 : 1.05); }
+                if (filterCategory !== 'Category (All)') { vol *= (filterCategory === 'HT' ? 1.2 : 0.7); rate *= (filterCategory === 'HT' ? 0.98 : 1.03); }
+                return { vol, rate };
+            }, [filterMonth, filterPlant, filterProduct, filterGrade, filterCategory]);
+            const filterMultiplier = filterState.vol;
+
+            const activeP7Data = useMemo(() => {
+                if (['KPR', 'Thailand', 'Hungary', 'S.Africa'].includes(filterPlant)) {
+                    return [
+                        { line: `${filterPlant} Line-1`, act: 93.5, tar: 95.0 },
+                        { line: `${filterPlant} Line-2`, act: 91.2, tar: 93.0 }
+                    ];
+                }
+                return p7Data.filter(d => {
+                    if (filterPlant === 'SEZ' && !d.line.includes('SEZ')) return false;
+                    if (filterPlant === 'DTA-PET' && (!d.line.includes('1036') && !d.line.includes('240'))) return false;
+                    if (filterPlant === 'DTA-BOPP' && !d.line.includes('BOPP')) return false;
+                    if (filterProduct === 'BOPP' && !d.line.includes('BOPP')) return false;
+                    if (filterProduct === 'PET' && !d.line.includes('PET')) return false;
+                    return true;
+                });
+            }, [filterPlant, filterProduct]);
+
+            const activeP8Data = useMemo(() => {
+                if (['KPR', 'Thailand', 'Hungary', 'S.Africa'].includes(filterPlant)) {
+                    return [
+                        { line: `${filterPlant} Line-1`, act: 90.5, tar: 92.0 },
+                        { line: `${filterPlant} Line-2`, act: 89.1, tar: 91.0 }
+                    ];
+                }
+                return p8Data.filter(d => {
+                    if (filterPlant === 'SEZ' && !d.line.includes('112')) return false;
+                    if (filterPlant === 'DTA-PET' && (!d.line.includes('1036') && !d.line.includes('240'))) return false;
+                    if (filterPlant === 'DTA-BOPP' && !d.line.includes('BOPP')) return false;
+                    if (filterProduct === 'BOPP' && !d.line.includes('BOPP')) return false;
+                    if (filterProduct === 'PET' && !d.line.includes('PET')) return false;
+                    return true;
+                });
+            }, [filterPlant, filterProduct]);
+
+            const getP6ProdM = (prod) => {
+                let m = filterMultiplier;
+                if (filterProduct !== 'Product (All)' && prod !== filterProduct && !(prod === 'BOPET' && filterProduct === 'PET')) return 0;
+                if (filterPlant === 'SEZ' && prod !== 'BOPET') return 0;
+                if (filterPlant === 'DTA-BOPP' && prod !== 'BOPP') return 0;
+                if (filterPlant === 'DTA-PET' && prod !== 'BOPET') return 0;
+                if (['KPR', 'Thailand', 'Hungary', 'S.Africa'].includes(filterPlant) && (prod === 'FOIL' || prod === 'CPP')) return 0;
+                return m;
+            };
+            
+            // P3 Sorting
+            const [sortConfig, setSortConfig] = useState({ key: 'qty', direction: 'desc' });
+            
+            const sortedP3 = useMemo(() => {
+                let sortable = p3Data.map(d => ({
+                    ...d,
+                    qty: d.qty * filterState.vol,
+                    aMt: filterGrade === 'B' ? 0 : d.aMt * filterState.vol,
+                    bMt: filterGrade === 'A' ? 0 : d.bMt * filterState.vol
+                }));
+                if (filterProduct === 'BOPP') sortable = sortable.slice(0, 3);
+                if (filterProduct === 'FOIL') sortable = sortable.slice(3, 5);
+                sortable.sort((a, b) => {
+                    if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+                    if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+                return sortable;
+            }, [sortConfig, filterState.vol, filterGrade, filterProduct]);
+            
+            const requestSort = (key) => {
+                let direction = 'desc';
+                if (sortConfig.key === key && sortConfig.direction === 'desc') direction = 'asc';
+                setSortConfig({ key, direction });
+            };
+
+            const SortIcon = ({ colKey }) => {
+                if (sortConfig.key !== colKey) return <span className="text-gray-300 ml-1 opacity-50">↕</span>;
+                return <span className="text-gray-600 ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>;
+            };
+
+            // P1 Chart Config
+            const p1Config = {
+                type: 'bar',
+                data: {
+                    labels: p1Data.map(d => d.month),
+                    datasets: [
+                        { type: 'bar', label: 'Budget MT', data: p1Data.map(d => d.budMt * filterMultiplier), backgroundColor: '#E5E7EB', borderRadius: 4, order: 2 },
+                        { type: 'bar', label: 'Actual MT', data: p1Data.map(d => d.actMt * filterMultiplier), backgroundColor: '#2563EB', borderRadius: 4, order: 2 },
+                        { type: 'line', label: 'Actual ₹Cr', data: p1Data.map(d => d.actCr * filterMultiplier), borderColor: '#111827', yAxisID: 'y1', pointRadius: 4, pointBackgroundColor: '#111827', tension: 0.3, borderWidth: 2, order: 1 }
+                    ]
+                },
+                options: {
+                    scales: {
+                        x: { stacked: false },
+                        y: { position: 'left', title: { display: true, text: 'MT', font: {size:10, family: 'Inter'} }, beginAtZero: true },
+                        y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '₹Cr', font: {size:10, family: 'Inter'} }, beginAtZero: true }
+                    }
+                }
+            };
+
+            // P2 Chart Configs
+            const getP2Data = () => {
+                if (activeP2Tab === 'Grade') {
+                    return {
+                        type: 'bar',
+                        data: {
+                            labels: p2aData.map(d => d.month),
+                            datasets: [
+                                { label: 'Grade A', data: p2aData.map(d => filterGrade === 'B' ? 0 : d.aMt * filterMultiplier), backgroundColor: '#2563EB', borderRadius: { topLeft: 0, topRight: 0 } },
+                                { label: 'Grade B', data: p2aData.map(d => filterGrade === 'A' ? 0 : d.bMt * filterMultiplier), backgroundColor: '#93C5FD', borderRadius: { topLeft: 4, topRight: 4 } }
+                            ]
+                        },
+                        options: { scales: { x: { stacked: true }, y: { stacked: true } } }
+                    };
+                } else if (activeP2Tab === 'Micron') {
+                    return {
+                        type: 'bar',
+                        data: {
+                            labels: p2bData.map(d => d.micron),
+                            datasets: [
+                                { label: 'Grade A', data: p2bData.map(d => filterGrade === 'B' ? 0 : d.aMt * filterMultiplier), backgroundColor: '#2563EB' },
+                                { label: 'Grade B', data: p2bData.map(d => filterGrade === 'A' ? 0 : d.bMt * filterMultiplier), backgroundColor: '#93C5FD' }
+                            ]
+                        },
+                        options: { scales: { x: { stacked: true }, y: { stacked: true } } }
+                    };
+                } else {
+                    return {
+                        type: 'bar',
+                        data: {
+                            labels: p2cData.map(d => d.month),
+                            datasets: [
+                                { label: 'HT', data: p2cData.map(d => filterCategory !== 'Category (All)' && filterCategory !== 'HT' ? 0 : d.ht * filterMultiplier), backgroundColor: '#2563EB' },
+                                { label: 'NT', data: p2cData.map(d => filterCategory !== 'Category (All)' && filterCategory !== 'NT' ? 0 : d.nt * filterMultiplier), backgroundColor: '#60A5FA' },
+                                { label: 'Hazy', data: p2cData.map(d => filterCategory !== 'Category (All)' && filterCategory !== 'Hazy' ? 0 : d.hazy * filterMultiplier), backgroundColor: '#CBD5E1', borderRadius: {topLeft:4, topRight:4} }
+                            ]
+                        },
+                        options: { scales: { x: { stacked: true }, y: { stacked: true } } }
+                    };
+                }
+            };
+
+            const p2GradeDonut = {
+                type: 'doughnut',
+                data: {
+                    labels: ['Grade A', 'Grade B'],
+                    datasets: [{
+                        data: [filterGrade === 'B' ? 0 : 31400 * filterMultiplier, filterGrade === 'A' ? 0 : 4000 * filterMultiplier], // Sep-26
+                        backgroundColor: ['#2563EB', '#93C5FD'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: { cutout: '75%', plugins: { legend: { display: false } }, maintainAspectRatio: false }
+            };
+
+            // P4 Config
+            const p4Config = {
+                type: 'line',
+                data: {
+                    labels: p4Data.map(d => d.month),
+                    datasets: [
+                        { label: 'Budget RM ₹/kg', data: p4Data.map(d => d.bud), borderColor: '#9CA3AF', borderDash: [5, 5], pointRadius: 0, borderWidth: 2 },
+                        { label: 'Actual RM ₹/kg', data: p4Data.map(d => d.act * filterState.rate), borderColor: '#2563EB', pointRadius: 4, pointBackgroundColor: '#2563EB', borderWidth: 2, fill: true, backgroundColor: 'rgba(37, 99, 235, 0.05)' }
+                    ]
+                },
+                options: {
+                    scales: { y: { beginAtZero: false } }
+                }
+            };
+
+            // P5 Config
+            const p5Config = {
+                type: 'bar',
+                data: {
+                    labels: p5Data.map(d => d.month),
+                    datasets: [
+                        { type: 'bar', label: 'VC ₹/kg', data: p5Data.map(d => d.vc * filterState.rate), backgroundColor: '#3B82F6', stack: 'Stack 0' },
+                        { type: 'bar', label: 'FC ₹/kg', data: p5Data.map(d => d.fc * filterState.rate), backgroundColor: '#93C5FD', borderRadius: {topLeft:4, topRight:4}, stack: 'Stack 0' },
+                        { type: 'line', label: 'Budget CoC', data: p5Data.map(d => d.bud * filterState.rate), borderColor: '#9CA3AF', borderDash: [5, 5], pointRadius: 0, borderWidth: 2, stack: 'Stack 1' }
+                    ]
+                },
+                options: {
+                    scales: { x: { stacked: true }, y: { stacked: true } }
+                }
+            };
+
+            // P6 Config
+            const p6Config = p6Drill ? {
+                type: 'bar',
+                data: {
+                    labels: p6Data.map(d => d.prod),
+                    datasets: [
+                        { label: 'Grade A MT', data: p6Data.map(d => filterGrade === 'B' ? 0 : d.aMt * getP6ProdM(d.prod)), backgroundColor: '#2563EB' },
+                        { label: 'Grade B MT', data: p6Data.map(d => filterGrade === 'A' ? 0 : d.bMt * getP6ProdM(d.prod)), backgroundColor: '#93C5FD', borderRadius: {topLeft:4, topRight:4} }
+                    ]
+                },
+                options: { scales: { x: { stacked: true }, y: { stacked: true } } }
+            } : {
+                type: 'bar',
+                data: {
+                    labels: p6Data.map(d => d.prod),
+                    datasets: [
+                        { label: 'Budget MT', data: p6Data.map(d => d.bud * getP6ProdM(d.prod)), backgroundColor: '#E5E7EB', borderRadius: 4 },
+                        { label: 'Actual MT', data: p6Data.map(d => d.act * getP6ProdM(d.prod)), backgroundColor: '#2563EB', borderRadius: 4 }
+                    ]
+                },
+                options: { scales: { x: { stacked: false }, y: { stacked: false } } }
+            };
+
+            // P8 Config
+            const p8Config = {
+                type: 'bar',
+                data: {
+                    labels: activeP8Data.map(d => d.line),
+                    datasets: [
+                        { 
+                            label: 'Efficiency %', 
+                            data: activeP8Data.map(d => parseFloat((d.act * filterState.rate).toFixed(1))), 
+                            backgroundColor: activeP8Data.map(d => (d.act * filterState.rate) >= d.tar ? '#16A34A' : '#DC2626'),
+                            borderRadius: 4,
+                            barPercentage: 0.6
+                        },
+                        {
+                            type: 'line',
+                            label: 'Target %',
+                            data: activeP8Data.map(d => d.tar),
+                            borderColor: '#111827',
+                            borderWidth: 0,
+                            pointStyle: 'rectRot',
+                            pointRadius: 6,
+                            pointBackgroundColor: '#111827',
+                            pointRotation: 45
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    scales: {
+                        x: { min: 85, max: 95 }
+                    }
+                }
+            };
+
+            return (
+                <div className="min-h-screen pb-10">
+                    {/* Sticky Header */}
+                    <div className="sticky top-0 z-50 bg-white border-b border-cardBorder shadow-sm px-6 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <img 
+                                src="./download.png" 
+                                alt="SRF Logo" 
+                                className="h-10 object-contain mr-2"
+                            />
+                            <div>
+                                <h1 className="text-lg font-semibold text-primary leading-tight">Business Head Dashboard</h1>
+                                <p className="text-[11px] text-secondary font-medium tracking-wide uppercase">Enterprise Analytics • {filterMonth === 'Month (All)' ? 'YTD 2026' : filterMonth}</p>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                            <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent">
+                                <option>Month (All)</option>
+                                <option>Apr-26</option>
+                                <option>May-26</option>
+                                <option>Jun-26</option>
+                                <option>Jul-26</option>
+                                <option>Aug-26</option>
+                                <option>Sep-26</option>
+                            </select>
+                            <select value={filterPlant} onChange={(e) => setFilterPlant(e.target.value)} className="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent">
+                                <option>Plant (All)</option>
+                                <option>SEZ</option>
+                                <option>DTA-PET</option>
+                                <option>DTA-BOPP</option>
+                                <option>KPR</option>
+                                <option>Thailand</option>
+                                <option>Hungary</option>
+                                <option>S.Africa</option>
+                            </select>
+                            <select value={filterProduct} onChange={(e) => setFilterProduct(e.target.value)} className="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent">
+                                <option>Product (All)</option>
+                                <option>PET</option>
+                                <option>BOPP</option>
+                                <option>CPP</option>
+                                <option>FOIL</option>
+                            </select>
+                            <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent">
+                                <option>Grade (All)</option>
+                                <option>A</option>
+                                <option>B</option>
+                            </select>
+                            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent">
+                                <option>Category (All)</option>
+                                <option>HT</option>
+                                <option>NT</option>
+                                <option>Hazy</option>
+                            </select>
+                            
+                            <div className="flex items-center bg-gray-100 rounded-lg p-0.5 ml-2">
+                                <button 
+                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${actVsBud === 'Actual' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                                    onClick={() => setActVsBud('Actual')}
+                                >Actual</button>
+                                <button 
+                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${actVsBud === 'Budget' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                                    onClick={() => setActVsBud('Budget')}
+                                >Budget</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="max-w-[1600px] mx-auto px-6 pt-6">
+                        
+                        {/* KPI Row */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+                            {kpiData.map(kpi => (
+                                <KPI key={kpi.id} {...kpi} act={kpi.act * filterMultiplier} bud={kpi.bud * filterMultiplier} mode={actVsBud} />
+                            ))}
+                        </div>
+
+                        {/* Panels Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                            
+                            {/* P1 */}
+                            <div className="col-span-1 md:col-span-12 lg:col-span-8">
+                                <ChartBox id="P1" title="Month-wise Sales" subtitle="Actual vs Budget (MT & Value)">
+                                    <ChartComponent type="bar" data={p1Config.data} options={p1Config.options} />
+                                </ChartBox>
+                            </div>
+
+                            {/* P2 */}
+                            <div className="col-span-1 md:col-span-12 lg:col-span-4 flex flex-col h-full">
+                                <ChartBox 
+                                    id="P2" 
+                                    title="Sales Breakup" 
+                                    rightAction={
+                                        <div className="flex bg-gray-100 rounded p-0.5">
+                                            {['Grade', 'Micron', 'Category'].map(tab => (
+                                                <button 
+                                                    key={tab}
+                                                    onClick={() => setActiveP2Tab(tab)}
+                                                    className={`px-2 py-1 text-[10px] font-medium rounded transition-colors ${activeP2Tab === tab ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                                                >{tab}</button>
+                                            ))}
+                                        </div>
+                                    }
+                                >
+                                    <div className="flex h-full w-full gap-4">
+                                        {activeP2Tab === 'Grade' && (
+                                            <div className="w-1/3 relative flex flex-col items-center justify-center border-r border-gray-100 pr-4">
+                                                <div className="relative w-full aspect-square max-h-[140px]">
+                                                    <ChartComponent type="doughnut" data={p2GradeDonut.data} options={p2GradeDonut.options} />
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                                        <span className="text-xs text-secondary">A Grade</span>
+                                                        <span className="text-sm font-semibold text-primary tabular-nums">88.7%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className={activeP2Tab === 'Grade' ? 'w-2/3 relative' : 'w-full relative'}>
+                                            <ChartComponent {...getP2Data()} />
+                                        </div>
+                                    </div>
+                                </ChartBox>
+                            </div>
+
+                            {/* P3 */}
+                            <div className="col-span-1 md:col-span-6 lg:col-span-6">
+                                <div className="card p-5 h-full flex flex-col">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <span className="bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold">P3</span>
+                                        <h3 className="text-sm font-semibold text-primary">Customer-wise Breakup</h3>
+                                        <span className="text-xs text-secondary ml-2">(Sep-26)</span>
+                                    </div>
+                                    <div className="flex-1 overflow-auto max-h-[300px]">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-gray-200">
+                                                    <th className="py-2 px-3 text-xs font-medium text-muted cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('name')}>
+                                                        Customer <SortIcon colKey="name" />
+                                                    </th>
+                                                    <th className="py-2 px-3 text-xs font-medium text-muted cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('qty')}>
+                                                        Sales Qty (MT) <SortIcon colKey="qty" />
+                                                    </th>
+                                                    <th className="py-2 px-3 text-xs font-medium text-muted text-right cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('npr')}>
+                                                        NPR ₹/kg <SortIcon colKey="npr" />
+                                                    </th>
+                                                    <th className="py-2 px-3 text-xs font-medium text-muted text-right cursor-pointer hover:text-primary transition-colors" onClick={() => requestSort('aMt')}>
+                                                        A Grade <SortIcon colKey="aMt" />
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="text-sm">
+                                                {sortedP3.map((row, i) => (
+                                                    <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                                                        <td className="py-2.5 px-3 font-medium text-primary">{row.name}</td>
+                                                        <td className="py-2.5 px-3 tabular-nums">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="min-w-[60px] inline-block">{row.qty.toLocaleString()}</span>
+                                                                <div className="w-16 shrink-0 h-1.5 bg-gray-100 rounded-full overflow-hidden hidden sm:block">
+                                                                    <div className="h-full bg-accent" style={{width: `${Math.min(100, (row.qty/8100)*100)}%`}}></div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-2.5 px-3 text-right tabular-nums">{row.npr.toFixed(1)}</td>
+                                                        <td className="py-2.5 px-3 text-right tabular-nums text-gradeA">{row.aMt.toLocaleString()}</td>
+                                                    </tr>
+                                                ))}
+                                                <tr className="bg-gray-50 font-semibold">
+                                                    <td className="py-2.5 px-3">Total</td>
+                                                    <td className="py-2.5 px-3 tabular-nums">35,400</td>
+                                                    <td className="py-2.5 px-3 text-right tabular-nums">157.1</td>
+                                                    <td className="py-2.5 px-3 text-right tabular-nums text-gradeA">31,400</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* P4 & P5 column */}
+                            <div className="col-span-1 md:col-span-6 lg:col-span-6 grid grid-rows-2 gap-6">
+                                <ChartBox id="P4" title="RM Cost Trend" subtitle="Actual vs Budget (₹/kg)">
+                                    <ChartComponent type="line" data={p4Config.data} options={p4Config.options} />
+                                </ChartBox>
+                                <ChartBox id="P5" title="Cost of Conversion (CoC)" subtitle="VC + FC vs Budget (₹/kg)">
+                                    <ChartComponent type="bar" data={p5Config.data} options={p5Config.options} />
+                                </ChartBox>
+                            </div>
+
+                            {/* P6 */}
+                            <div className="col-span-1 md:col-span-12 lg:col-span-5">
+                                <ChartBox 
+                                    id="P6" 
+                                    title="Packed Production" 
+                                    subtitle="Sep-26"
+                                    rightAction={
+                                        <button 
+                                            onClick={() => setP6Drill(!p6Drill)}
+                                            className="text-[10px] font-medium bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 flex items-center gap-1 transition-colors"
+                                        >
+                                            {p6Drill ? 'Back to Overview' : 'Drill A/B Grade'}
+                                        </button>
+                                    }
+                                >
+                                    <ChartComponent type="bar" data={p6Config.data} options={p6Config.options} />
+                                </ChartBox>
+                            </div>
+
+                            {/* P7 Gauges */}
+                            <div className="col-span-1 md:col-span-12 lg:col-span-7 card p-5 flex flex-col">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <span className="bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold">P7 & P8</span>
+                                        <h3 className="text-sm font-semibold text-primary">Line Efficiency Analytics</h3>
+                                    </div>
+                                </div>
+                                
+                                <div className="mb-2 text-xs font-mono text-muted">Uptime %</div>
+                                <div className="grid grid-cols-5 gap-2 items-center min-h-[120px]">
+                                    {activeP7Data.map((d, i) => {
+                                        const act = parseFloat((d.act * filterState.rate).toFixed(1));
+                                        const isOk = act >= d.tar;
+                                        const color = isOk ? '#16A34A' : '#DC2626';
+                                        
+                                        const gaugeConfig = {
+                                            type: 'doughnut',
+                                            data: {
+                                                labels: ['Actual', 'Remaining'],
+                                                datasets: [{
+                                                    data: [act, Math.max(0, 100 - act)],
+                                                    backgroundColor: [color, '#F3F4F6'],
+                                                    borderWidth: 0,
+                                                    circumference: 180,
+                                                    rotation: 270
+                                                }]
+                                            },
+                                            options: {
+                                                cutout: '75%',
+                                                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                                                maintainAspectRatio: false
+                                            }
+                                        };
+
+                                        return (
+                                            <div key={i} className="flex flex-col items-center relative">
+                                                <div className="w-full aspect-[2/1] relative">
+                                                    <ChartComponent {...gaugeConfig} />
+                                                    <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-2">
+                                                        <span className={`text-sm font-semibold tabular-nums leading-none`} style={{color}}>{act}%</span>
+                                                        <span className="text-[10px] text-muted">Tar {d.tar}%</span>
+                                                    </div>
+                                                </div>
+                                                <span className="text-[10px] font-medium text-center text-secondary mt-3 leading-tight truncate w-full px-1" title={d.line}>{d.line}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                
+                                <div className="mt-4 pt-4 border-t border-gray-100">
+                                    <div className="mb-2 text-xs font-mono text-muted">Slitting Efficiency %</div>
+                                    <div className="h-[140px] relative w-full">
+                                        <ChartComponent type="bar" data={p8Config.data} options={p8Config.options} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dashboard />);
+    </script>
+</body>
+</html>
